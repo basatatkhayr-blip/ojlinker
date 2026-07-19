@@ -35,7 +35,71 @@
       return `<a href="${esc(loc)}" target="_blank" rel="noopener" class="loc-link">🔗 فتح</a>`;
     return esc(loc);
   }
-  function waLink(phone){ return "https://wa.me/" + phone + "?text=" + encodeURIComponent(MSG); }
+  function waLink(phone){
+    const mode = localStorage.getItem("wa_mode") || "wa.me";
+    const text = encodeURIComponent(MSG);
+    
+    // فحص نظام التشغيل لتحديد الروابط المباشرة (Deep Links)
+    const ua = navigator.userAgent.toLowerCase();
+    const isAndroid = ua.indexOf("android") > -1;
+    const isIOS = /ipad|iphone|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (mode === "web") {
+      return `https://web.whatsapp.com/send?phone=${phone}&text=${text}`;
+    }
+
+    if (mode === "personal") {
+      if (isAndroid) {
+        // إجبار فتح تطبيق الواتساب العادي على أندرويد
+        return `intent://send?phone=${phone}&text=${text}#Intent;package=com.whatsapp;scheme=whatsapp;end`;
+      } else if (isIOS) {
+        // إجبار فتح تطبيق الواتساب العادي على آيفون
+        return `whatsapp-consumer://send?phone=${phone}&text=${text}`;
+      } else {
+        // على الكمبيوتر: يفتح صفحة التحويل لتطبيق الواتساب المثبت
+        return `https://api.whatsapp.com/send?phone=${phone}&text=${text}`;
+      }
+    }
+
+    if (mode === "business") {
+      if (isAndroid) {
+        // إجبار فتح تطبيق واتساب الأعمال على أندرويد
+        return `intent://send?phone=${phone}&text=${text}#Intent;package=com.whatsapp.w4b;scheme=whatsapp;end`;
+      } else if (isIOS) {
+        // إجبار فتح تطبيق واتساب الأعمال على آيفون
+        return `whatsapp://send?phone=${phone}&text=${text}`;
+      } else {
+        // على الكمبيوتر: يفتح الرابط الافتراضي للتحويل للنشط
+        return `https://api.whatsapp.com/send?phone=${phone}&text=${text}`;
+      }
+    }
+
+    if (mode === "gbwhatsapp") {
+      if (isAndroid) {
+        // فتح تطبيق جي بي واتساب على أندرويد
+        return `intent://send?phone=${phone}&text=${text}#Intent;package=com.gbwhatsapp;scheme=whatsapp;end`;
+      } else {
+        return `whatsapp://send?phone=${phone}&text=${text}`;
+      }
+    }
+
+    if (mode === "fmwhatsapp") {
+      if (isAndroid) {
+        // فتح تطبيق واتساب إف إم على أندرويد
+        return `intent://send?phone=${phone}&text=${text}#Intent;package=com.fmwhatsapp;scheme=whatsapp;end`;
+      } else {
+        return `whatsapp://send?phone=${phone}&text=${text}`;
+      }
+    }
+
+    if (mode === "whatsapp_scheme") {
+      // إطلاق رابط بروتوكول واتساب المباشر (يطلب من النظام الاختيار إذا لم يكن هناك افتراضي)
+      return `whatsapp://send?phone=${phone}&text=${text}`;
+    }
+
+    // الوضع الافتراضي (تلقائي): wa.me
+    return `https://wa.me/${phone}?text=${text}`;
+  }
   const sentByOf = (c) => c.sent_by_email || null;
 
   // ============================================================
@@ -113,6 +177,7 @@
       return true;
     });
     $("emptyState").classList.toggle("hidden", rows.length>0);
+    // 1) Desktop rendering
     $("contactsBody").innerHTML = rows.map(c=>{
       const sentDisabled = c.status==="sent"||c.status==="replied";
       return `<tr data-id="${esc(c.id)}">
@@ -130,6 +195,36 @@
           <button class="btn btn-sm" data-act="no">✕</button>
         </div></td>
       </tr>`;
+    }).join("");
+
+    // 2) Mobile rendering (card design)
+    $("contactsMobileList").innerHTML = rows.map(c=>{
+      const sentDisabled = c.status==="sent"||c.status==="replied";
+      return `
+        <div class="contact-card" data-id="${esc(c.id)}">
+          <div class="card-top">
+            <strong class="card-name">${esc(c.name||"—")}</strong>
+            <span class="pill st-${esc(c.status)}">${STATUS_LABEL[c.status]||c.status}</span>
+          </div>
+          <div class="card-mid">
+            <span class="card-info">📞 ${esc(c.phone)}</span>
+            <span class="card-info">🏙️ ${esc(c.city||"—")}</span>
+            <span class="pill pill-cat">${esc(c.category)}</span>
+            ${c.location ? `<span class="card-info-loc">${renderLocation(c.location)}</span>` : ""}
+          </div>
+          ${c.sent_by_email || c.claimed_by_email ? `
+            <div class="card-assign">
+              👤 المسؤول: <span class="assigned-user">${esc((c.sent_by_email||c.claimed_by_email||"").split("@")[0])}</span>
+            </div>
+          ` : ""}
+          <div class="card-actions">
+            <button class="btn btn-sm btn-wa" data-act="send">💬 واتساب</button>
+            <button class="btn btn-sm" data-act="sent" ${sentDisabled?"disabled":""}>✓ اتبعت</button>
+            <button class="btn btn-sm" data-act="reply">ردّ</button>
+            <button class="btn btn-sm" data-act="no">✕</button>
+          </div>
+        </div>
+      `;
     }).join("");
   }
 
@@ -181,7 +276,7 @@
       if(q){ const hay=((c.name||"")+" "+(c.phone||"")).toLowerCase(); if(hay.indexOf(q)===-1) return false; }
       return true;
     });
-    $("sentEmpty").classList.toggle("hidden", rows.length>0);
+    // 1) Desktop table
     $("sentBody").innerHTML = rows.map(c=>{
       const dateStr = c.sent_at ? new Date(c.sent_at).toLocaleDateString("ar-SA",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
       return `<tr>
@@ -194,6 +289,29 @@
         <td class="muted small">${esc((sentByOf(c)||"—").split("@")[0])}</td>
         <td class="muted small">${dateStr}</td>
       </tr>`;
+    }).join("");
+
+    // 2) Mobile cards
+    $("sentMobileList").innerHTML = rows.map(c=>{
+      const dateStr = c.sent_at ? new Date(c.sent_at).toLocaleDateString("ar-SA",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
+      return `
+        <div class="contact-card">
+          <div class="card-top">
+            <strong class="card-name">${esc(c.name||"—")}</strong>
+            <span class="pill st-${esc(c.status)}">${STATUS_LABEL[c.status]||c.status}</span>
+          </div>
+          <div class="card-mid">
+            <span class="card-info">📞 ${esc(c.phone)}</span>
+            <span class="card-info">🏙️ ${esc(c.city||"—")}</span>
+            <span class="pill pill-cat">${esc(c.category)}</span>
+            ${c.location ? `<span class="card-info-loc">${renderLocation(c.location)}</span>` : ""}
+          </div>
+          <div class="card-assign" style="display: flex; justify-content: space-between;">
+            <span>👤 المسؤول: <span class="assigned-user">${esc((sentByOf(c)||"—").split("@")[0])}</span></span>
+            <span class="muted text-xs">📅 ${dateStr}</span>
+          </div>
+        </div>
+      `;
     }).join("");
   }
 
@@ -228,7 +346,9 @@
   // ============================================================
   async function onRowClick(e){
     const btn = e.target.closest("button[data-act]"); if(!btn) return;
-    const id = e.target.closest("tr").dataset.id;
+    const rowEl = e.target.closest("tr") || e.target.closest(".contact-card");
+    if(!rowEl) return;
+    const id = rowEl.dataset.id;
     const c = contacts.find(x=>String(x.id)===String(id)); if(!c) return;
     try{
       if(btn.dataset.act==="send"){
@@ -356,7 +476,10 @@
   // ============================================================
   async function startApp(){
     $("authView").classList.add("hidden"); $("appView").classList.remove("hidden");
-    $("userEmail").textContent = user.email; $("userAvatar").textContent = (user.email||"?").trim().charAt(0).toUpperCase(); $("demoBadge").classList.toggle("hidden", !DEMO);
+    const userPrefix = (user.email || "user").split("@")[0];
+    $("userEmail").textContent = userPrefix; 
+    $("userAvatar").textContent = userPrefix.charAt(0).toUpperCase(); 
+    $("demoBadge").classList.toggle("hidden", !DEMO);
     await api.loadCategories(); fillCategorySelects(); onCategoryChange();
     renderMessages();
     await refresh(); api.subscribe(()=>refresh());
@@ -369,6 +492,7 @@
     $("logoutBtn").addEventListener("click", ()=>api.signOut());
     document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>switchTab(t.dataset.tab)));
     $("contactsBody").addEventListener("click", onRowClick);
+    $("contactsMobileList").addEventListener("click", onRowClick);
     ["filterCategory","filterStatus","filterMember"].forEach(id=>$(id).addEventListener("change", renderTable));
     ["filterCity","searchInput"].forEach(id=>$(id).addEventListener("input", renderTable));
     ["repCategory"].forEach(id=>$(id).addEventListener("change", renderReports));
@@ -381,9 +505,15 @@
     $("csvFile").addEventListener("change", (e)=>handleFile(e.target.files[0]));
     $("confirmUpload").addEventListener("click", confirmUpload);
     $("uploadModal").addEventListener("click", (e)=>{ if(e.target===$("uploadModal")) closeModal(); });
+    $("waModeSelect").addEventListener("change", (e) => {
+      localStorage.setItem("wa_mode", e.target.value);
+    });
   }
 
   async function init(){
+    // استرجاع طريقة الإرسال المفضلة
+    const savedMode = localStorage.getItem("wa_mode") || "wa.me";
+    $("waModeSelect").value = savedMode;
     bind();
     if(!DEMO){
       sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);

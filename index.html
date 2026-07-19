@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OJLinker — متابعة التواصل</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=8" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -41,16 +44,37 @@
         <span id="demoBadge" class="badge badge-demo hidden">وضع تجريبي</span>
       </div>
       <div class="topbar-actions">
+        <select id="waModeSelect" class="input" style="width: auto; min-height: 34px; padding: 4px 10px; font-size: 13px; font-weight: 600;">
+          <option value="wa.me">🔗 الافتراضي (تلقائي)</option>
+          <option value="personal">👤 واتساب العادي (Personal)</option>
+          <option value="business">💼 واتساب الأعمال (Business)</option>
+          <option value="gbwhatsapp">🚀 جي بي واتساب (GBWhatsApp)</option>
+          <option value="fmwhatsapp">⚡ واتساب إف إم (FMWhatsApp)</option>
+          <option value="whatsapp_scheme">📲 رابط مباشر (whatsapp://)</option>
+          <option value="web">🌐 واتساب ويب (Web)</option>
+        </select>
         <span id="userChip" class="user-chip"><span class="avatar" id="userAvatar"></span><span id="userEmail"></span></span>
         <button id="logoutBtn" class="btn btn-ghost">خروج</button>
       </div>
     </header>
 
     <nav class="tabs">
-      <button class="tab active" data-tab="contacts">جهات الاتصال</button>
-      <button class="tab" data-tab="sent">📤 المُرسَل</button>
-      <button class="tab" data-tab="messages">💬 الرسائل</button>
-      <button class="tab" data-tab="reports">التقارير</button>
+      <button class="tab active" data-tab="contacts">
+        <span class="tab-icon">📇</span>
+        <span class="tab-label">جهات الاتصال</span>
+      </button>
+      <button class="tab" data-tab="sent">
+        <span class="tab-icon">📤</span>
+        <span class="tab-label">المُرسَل</span>
+      </button>
+      <button class="tab" data-tab="messages">
+        <span class="tab-icon">💬</span>
+        <span class="tab-label">الرسائل</span>
+      </button>
+      <button class="tab" data-tab="reports">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">التقارير</span>
+      </button>
     </nav>
 
     <!-- ======== صفحة جهات الاتصال ======== -->
@@ -75,7 +99,7 @@
         <button id="uploadBtn" class="btn btn-primary">⬆️ رفع ملف Excel / CSV</button>
       </section>
 
-      <section class="table-wrap">
+      <section class="table-wrap desktop-only">
         <table class="contacts-table">
           <thead>
             <tr>
@@ -85,8 +109,12 @@
           </thead>
           <tbody id="contactsBody"></tbody>
         </table>
-        <div id="emptyState" class="empty hidden">مفيش أرقام مطابقة. جرّب تغير الفلاتر أو ارفع ملف Excel / CSV.</div>
       </section>
+
+      <!-- Mobile Cards view -->
+      <section class="mobile-only mobile-list" id="contactsMobileList"></section>
+      
+      <div id="emptyState" class="empty hidden">مفيش أرقام مطابقة. جرّب تغير الفلاتر أو ارفع ملف Excel / CSV.</div>
     </div>
 
     <!-- ======== صفحة المُرسَل ======== -->
@@ -99,7 +127,7 @@
           <input id="sentSearch" class="input" type="search" placeholder="🔍 بحث بالاسم / الرقم" />
         </div>
       </section>
-      <section class="table-wrap">
+      <section class="table-wrap desktop-only">
         <table class="contacts-table">
           <thead>
             <tr>
@@ -109,8 +137,12 @@
           </thead>
           <tbody id="sentBody"></tbody>
         </table>
-        <div id="sentEmpty" class="empty hidden">لسه مفيش أرقام اتبعتلها.</div>
       </section>
+
+      <!-- Mobile Cards view for Sent -->
+      <section class="mobile-only mobile-list" id="sentMobileList"></section>
+
+      <div id="sentEmpty" class="empty hidden">لسه مفيش أرقام اتبعتلها.</div>
     </div>
 
     <!-- ======== صفحة الرسائل ======== -->
@@ -171,7 +203,7 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="config.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <script src="config.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
