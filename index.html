@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OJLinker — متابعة التواصل</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <!-- تسجيل الدخول -->
+  <div id="authView" class="auth-view hidden">
+    <div class="auth-bg"></div>
+    <form id="loginForm" class="auth-card">
+      <div class="brand brand-lg">
+        <span class="brand-mark">OJ</span>
+        <span class="brand-name">OJ<span>Linker</span></span>
+      </div>
+      <p class="muted auth-sub">منصة متابعة التواصل مع العملاء</p>
+      <label>البريد الإلكتروني
+        <input type="email" id="email" autocomplete="username" required placeholder="you@ojlinker.com" />
+      </label>
+      <label>كلمة المرور
+        <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••" />
+      </label>
+      <button type="submit" class="btn btn-primary btn-block">تسجيل الدخول</button>
+      <p id="authError" class="error hidden"></p>
+      <p class="muted small copyright">© OJLinker — جميع الحقوق محفوظة</p>
+    </form>
+  </div>
+
+  <!-- التطبيق -->
+  <div id="appView" class="app-view hidden">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">OJ</span>
+        <span class="brand-name">OJ<span>Linker</span></span>
+        <span class="topbar-sub">متابعة التواصل</span>
+        <span id="demoBadge" class="badge badge-demo hidden">وضع تجريبي</span>
+      </div>
+      <div class="topbar-actions">
+        <span id="userChip" class="user-chip"><span class="avatar" id="userAvatar"></span><span id="userEmail"></span></span>
+        <button id="logoutBtn" class="btn btn-ghost">خروج</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="contacts">جهات الاتصال</button>
+      <button class="tab" data-tab="sent">📤 المُرسَل</button>
+      <button class="tab" data-tab="messages">💬 الرسائل</button>
+      <button class="tab" data-tab="reports">التقارير</button>
+    </nav>
+
+    <!-- ======== صفحة جهات الاتصال ======== -->
+    <div id="contactsPage">
+      <section class="stats" id="stats"></section>
+
+      <section class="toolbar">
+        <div class="filters">
+          <select id="filterCategory" class="input"><option value="">كل التصنيفات</option></select>
+          <select id="filterStatus" class="input">
+            <option value="">كل الحالات</option>
+            <option value="new">جديد</option>
+            <option value="claimed">محجوز</option>
+            <option value="sent">اتبعت</option>
+            <option value="replied">ردّ</option>
+            <option value="no_answer">مفيش رد</option>
+          </select>
+          <select id="filterMember" class="input"><option value="">كل الأعضاء</option></select>
+          <input id="filterCity" class="input" type="search" placeholder="🏙️ تصفية بالمدينة" />
+          <input id="searchInput" class="input" type="search" placeholder="🔍 بحث بالاسم / الرقم" />
+        </div>
+        <button id="uploadBtn" class="btn btn-primary">⬆️ رفع ملف Excel / CSV</button>
+      </section>
+
+      <section class="table-wrap">
+        <table class="contacts-table">
+          <thead>
+            <tr>
+              <th>الاسم</th><th>الرقم</th><th>المدينة</th><th>الموقع</th>
+              <th>التصنيف</th><th>الحالة</th><th>المسؤول</th><th class="actions-col">إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="contactsBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty hidden">مفيش أرقام مطابقة. جرّب تغير الفلاتر أو ارفع ملف Excel / CSV.</div>
+      </section>
+    </div>
+
+    <!-- ======== صفحة المُرسَل ======== -->
+    <div id="sentPage" class="hidden">
+      <section class="toolbar">
+        <div class="filters">
+          <select id="sentFilterCategory" class="input"><option value="">كل التصنيفات</option></select>
+          <select id="sentFilterMember" class="input"><option value="">كل الأعضاء</option></select>
+          <input id="sentFilterCity" class="input" type="search" placeholder="🏙️ تصفية بالمدينة" />
+          <input id="sentSearch" class="input" type="search" placeholder="🔍 بحث بالاسم / الرقم" />
+        </div>
+      </section>
+      <section class="table-wrap">
+        <table class="contacts-table">
+          <thead>
+            <tr>
+              <th>الاسم</th><th>الرقم</th><th>المدينة</th><th>الموقع</th>
+              <th>التصنيف</th><th>الحالة</th><th>بعتله</th><th>تاريخ الإرسال</th>
+            </tr>
+          </thead>
+          <tbody id="sentBody"></tbody>
+        </table>
+        <div id="sentEmpty" class="empty hidden">لسه مفيش أرقام اتبعتلها.</div>
+      </section>
+    </div>
+
+    <!-- ======== صفحة الرسائل ======== -->
+    <div id="messagesPage" class="hidden">
+      <div id="messagesList" class="messages-grid"></div>
+    </div>
+
+    <!-- ======== صفحة التقارير ======== -->
+    <div id="reportsPage" class="hidden">
+      <section class="toolbar">
+        <div class="filters">
+          <select id="repCategory" class="input"><option value="">كل التصنيفات</option></select>
+          <input id="repCity" class="input" type="search" placeholder="🔍 تصفية بالمدينة" />
+          <input id="repMember" class="input" type="search" placeholder="🔍 بحث بالعضو" />
+        </div>
+      </section>
+
+      <section class="table-wrap">
+        <table class="contacts-table" id="reportTable">
+          <thead id="reportHead"></thead>
+          <tbody id="reportBody"></tbody>
+          <tfoot id="reportFoot"></tfoot>
+        </table>
+        <div id="reportEmpty" class="empty hidden">لسه مفيش رسائل اتبعتة.</div>
+      </section>
+    </div>
+
+    <footer class="app-footer muted small">⚙️ مدعوم بواسطة <strong>OJLinker</strong></footer>
+  </div>
+
+  <!-- نافذة رفع CSV -->
+  <div id="uploadModal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>رفع أرقام جديدة</h2>
+        <button id="closeModal" class="btn btn-ghost">✕</button>
+      </div>
+      <label>التصنيف
+        <select id="uploadCategory" class="input"></select>
+      </label>
+      <div id="newCategoryRow" class="hidden">
+        <label>اسم التصنيف الجديد
+          <input id="newCategoryName" class="input" placeholder="مثلاً: عيادة" />
+        </label>
+      </div>
+      <label class="filedrop" id="fileDrop">
+        <input type="file" id="csvFile" accept=".xlsx,.xls,.csv" hidden />
+        <span id="fileLabel">📁 اختر ملف Excel أو CSV (أعمدة: name, phone, city, location)</span>
+      </label>
+      <div id="uploadPreview" class="preview hidden"></div>
+      <div id="uploadResult" class="result hidden"></div>
+      <div class="modal-foot">
+        <button id="confirmUpload" class="btn btn-primary" disabled>رفع وتجاهل المكرر</button>
+      </div>
+      <p class="muted small">ℹ️ الأرقام الموجودة قبل كده هيتم تجاهلها تلقائيًا (مفيش تكرار).</p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="config.js?v=3"></script>
+  <script src="app.js?v=3"></script>
+</body>
+</html>
