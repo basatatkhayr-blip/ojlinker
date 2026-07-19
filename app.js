@@ -36,7 +36,7 @@
     return esc(loc);
   }
   function waLink(phone){
-    const mode = localStorage.getItem("wa_mode") || "wa.me";
+    const mode = localStorage.getItem("wa_mode") || "personal";
     const text = encodeURIComponent(MSG);
     
     // فحص نظام التشغيل لتحديد الروابط المباشرة (Deep Links)
@@ -46,19 +46,6 @@
 
     if (mode === "web") {
       return `https://web.whatsapp.com/send?phone=${phone}&text=${text}`;
-    }
-
-    if (mode === "personal") {
-      if (isAndroid) {
-        // إجبار فتح تطبيق الواتساب العادي على أندرويد
-        return `intent://send?phone=${phone}&text=${text}#Intent;package=com.whatsapp;scheme=whatsapp;end`;
-      } else if (isIOS) {
-        // إجبار فتح تطبيق الواتساب العادي على آيفون
-        return `whatsapp-consumer://send?phone=${phone}&text=${text}`;
-      } else {
-        // على الكمبيوتر: يفتح صفحة التحويل لتطبيق الواتساب المثبت
-        return `https://api.whatsapp.com/send?phone=${phone}&text=${text}`;
-      }
     }
 
     if (mode === "business") {
@@ -74,31 +61,17 @@
       }
     }
 
-    if (mode === "gbwhatsapp") {
-      if (isAndroid) {
-        // فتح تطبيق جي بي واتساب على أندرويد
-        return `intent://send?phone=${phone}&text=${text}#Intent;package=com.gbwhatsapp;scheme=whatsapp;end`;
-      } else {
-        return `whatsapp://send?phone=${phone}&text=${text}`;
-      }
+    // افتراضي (واتساب عادي - personal)
+    if (isAndroid) {
+      // إجبار فتح تطبيق الواتساب العادي على أندرويد
+      return `intent://send?phone=${phone}&text=${text}#Intent;package=com.whatsapp;scheme=whatsapp;end`;
+    } else if (isIOS) {
+      // إجبار فتح تطبيق الواتساب العادي على آيفون
+      return `whatsapp-consumer://send?phone=${phone}&text=${text}`;
+    } else {
+      // على الكمبيوتر: يفتح صفحة التحويل لتطبيق الواتساب المثبت
+      return `https://api.whatsapp.com/send?phone=${phone}&text=${text}`;
     }
-
-    if (mode === "fmwhatsapp") {
-      if (isAndroid) {
-        // فتح تطبيق واتساب إف إم على أندرويد
-        return `intent://send?phone=${phone}&text=${text}#Intent;package=com.fmwhatsapp;scheme=whatsapp;end`;
-      } else {
-        return `whatsapp://send?phone=${phone}&text=${text}`;
-      }
-    }
-
-    if (mode === "whatsapp_scheme") {
-      // إطلاق رابط بروتوكول واتساب المباشر (يطلب من النظام الاختيار إذا لم يكن هناك افتراضي)
-      return `whatsapp://send?phone=${phone}&text=${text}`;
-    }
-
-    // الوضع الافتراضي (تلقائي): wa.me
-    return `https://wa.me/${phone}?text=${text}`;
   }
   const sentByOf = (c) => c.sent_by_email || null;
 
@@ -176,28 +149,7 @@
       if(q){ const hay=((c.name||"")+" "+(c.phone||"")).toLowerCase(); if(hay.indexOf(q)===-1) return false; }
       return true;
     });
-    $("emptyState").classList.toggle("hidden", rows.length>0);
-    // 1) Desktop rendering
-    $("contactsBody").innerHTML = rows.map(c=>{
-      const sentDisabled = c.status==="sent"||c.status==="replied";
-      return `<tr data-id="${esc(c.id)}">
-        <td class="name">${esc(c.name||"—")}</td>
-        <td dir="ltr" class="small">${esc(c.phone)}</td>
-        <td class="city-cell">${esc(c.city||"—")}</td>
-        <td class="loc-cell">${renderLocation(c.location)}</td>
-        <td><span class="pill pill-cat">${esc(c.category)}</span></td>
-        <td><span class="pill st-${esc(c.status)}">${STATUS_LABEL[c.status]||c.status}</span></td>
-        <td class="muted small">${esc((c.sent_by_email||c.claimed_by_email||"—").split("@")[0])}</td>
-        <td class="actions-col"><div class="row-actions">
-          <button class="btn btn-sm btn-wa" data-act="send">💬 واتساب</button>
-          <button class="btn btn-sm" data-act="sent" ${sentDisabled?"disabled":""}>✓ اتبعت</button>
-          <button class="btn btn-sm" data-act="reply">ردّ</button>
-          <button class="btn btn-sm" data-act="no">✕</button>
-        </div></td>
-      </tr>`;
-    }).join("");
-
-    // 2) Mobile rendering (card design)
+    // Render responsive card grid
     $("contactsMobileList").innerHTML = rows.map(c=>{
       const sentDisabled = c.status==="sent"||c.status==="replied";
       return `
@@ -276,22 +228,7 @@
       if(q){ const hay=((c.name||"")+" "+(c.phone||"")).toLowerCase(); if(hay.indexOf(q)===-1) return false; }
       return true;
     });
-    // 1) Desktop table
-    $("sentBody").innerHTML = rows.map(c=>{
-      const dateStr = c.sent_at ? new Date(c.sent_at).toLocaleDateString("ar-SA",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
-      return `<tr>
-        <td class="name">${esc(c.name||"—")}</td>
-        <td dir="ltr" class="small">${esc(c.phone)}</td>
-        <td class="city-cell">${esc(c.city||"—")}</td>
-        <td class="loc-cell">${renderLocation(c.location)}</td>
-        <td><span class="pill pill-cat">${esc(c.category)}</span></td>
-        <td><span class="pill st-${esc(c.status)}">${STATUS_LABEL[c.status]||c.status}</span></td>
-        <td class="muted small">${esc((sentByOf(c)||"—").split("@")[0])}</td>
-        <td class="muted small">${dateStr}</td>
-      </tr>`;
-    }).join("");
-
-    // 2) Mobile cards
+    // Render responsive card grid for Sent contacts
     $("sentMobileList").innerHTML = rows.map(c=>{
       const dateStr = c.sent_at ? new Date(c.sent_at).toLocaleDateString("ar-SA",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
       return `
@@ -491,7 +428,6 @@
       catch(err){ $("authError").textContent="تعذر الدخول: "+(err.message||err); $("authError").classList.remove("hidden"); } });
     $("logoutBtn").addEventListener("click", ()=>api.signOut());
     document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>switchTab(t.dataset.tab)));
-    $("contactsBody").addEventListener("click", onRowClick);
     $("contactsMobileList").addEventListener("click", onRowClick);
     ["filterCategory","filterStatus","filterMember"].forEach(id=>$(id).addEventListener("change", renderTable));
     ["filterCity","searchInput"].forEach(id=>$(id).addEventListener("input", renderTable));
@@ -512,7 +448,10 @@
 
   async function init(){
     // استرجاع طريقة الإرسال المفضلة
-    const savedMode = localStorage.getItem("wa_mode") || "wa.me";
+    let savedMode = localStorage.getItem("wa_mode") || "personal";
+    if(savedMode === "wa.me" || savedMode === "gbwhatsapp" || savedMode === "fmwhatsapp" || savedMode === "whatsapp_scheme") {
+      savedMode = "personal";
+    }
     $("waModeSelect").value = savedMode;
     bind();
     if(!DEMO){
