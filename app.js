@@ -5,7 +5,7 @@
   const CC = CFG.DEFAULT_COUNTRY_CODE || "20";
   const MSG = CFG.DEFAULT_MESSAGE || "السلام عليكم ورحمة الله وبركاته";
 
-  const STATUS_LABEL = { new:"جديد", claimed:"محجوز", sent:"اتبعت", replied:"ردّ", no_answer:"مفيش رد" };
+  const STATUS_LABEL = { new:"جديد", claimed:"محجوز", sent:"اتبعتله خلاص", replied:"ردّ", no_answer:"مفيش رد" };
   const SENT_STATES = ["sent","replied"]; // تعتبر "اتبعت" فعليًا
 
   let sb = null, user = null;
@@ -108,9 +108,17 @@
     },
     async setStatus(id, status){
       const patch = { status };
-      if(status==="sent"){ patch.sent_by_email = user.email; patch.sent_at = new Date().toISOString(); }
+      if(status==="sent"){ 
+        patch.sent_by_email = user.email; 
+        patch.sent_at = new Date().toISOString(); 
+        if(user.id) patch.sent_by = user.id;
+        patch.claimed_by_email = user.email;
+        patch.claimed_at = patch.sent_at;
+        if(user.id) patch.claimed_by = user.id;
+      }
       if(DEMO){ const c=contacts.find(x=>x.id===id); Object.assign(c,patch); return; }
-      const { error } = await sb.from("contacts").update(patch).eq("id",id); if(error) throw error;
+      const { error } = await sb.from("contacts").update(patch).eq("id",id);
+      if(error) throw error;
     },
     async upload(rows){
       if(DEMO){
@@ -134,7 +142,7 @@
     const by = s => contacts.filter(c=>c.status===s).length;
     $("stats").innerHTML = [
       ["total",contacts.length,"الإجمالي"],["new",by("new"),"جديد"],["claimed",by("claimed"),"محجوز"],
-      ["sent",by("sent"),"اتبعت"],["replied",by("replied"),"ردّ"]
+      ["sent",by("sent"),"اتبعتله خلاص"],["replied",by("replied"),"ردّ"]
     ].map(([k,n,l])=>`<div class="stat ${k}"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join("");
   }
 
@@ -152,6 +160,8 @@
     // Render responsive card grid
     $("contactsMobileList").innerHTML = rows.map(c=>{
       const sentDisabled = c.status==="sent"||c.status==="replied";
+      const waButtonClass = sentDisabled ? "btn-wa-sent" : "btn-wa";
+      const waButtonText = sentDisabled ? "✅ أُرسل" : "إرسال";
       return `
         <div class="contact-card" data-id="${esc(c.id)}">
           <div class="card-top">
@@ -170,7 +180,7 @@
             </div>
           ` : ""}
           <div class="card-actions">
-            <button class="btn btn-sm btn-wa" data-act="send">💬 واتساب</button>
+            <button class="btn btn-sm ${waButtonClass}" data-act="send">${waButtonText}</button>
             <button class="btn btn-sm" data-act="sent" ${sentDisabled?"disabled":""}>✓ اتبعت</button>
             <button class="btn btn-sm" data-act="reply">ردّ</button>
             <button class="btn btn-sm" data-act="no">✕</button>
@@ -289,20 +299,66 @@
     const c = contacts.find(x=>String(x.id)===String(id)); if(!c) return;
     try{
       if(btn.dataset.act==="send"){
-        if(c.status==="new"){
-          const claimed = await api.claim(c.id);
-          if(!claimed){ toast("الرقم ده حجزه حد تاني للتو!"); await refresh(); return; }
-          Object.assign(c, claimed);
+        const url = waLink(c.phone);
+        const oldStatus = c.status;
+        
+        // 1. Optimistic UI update immediately
+        c.status = "sent";
+        c.sent_by_email = user.email;
+        c.sent_at = new Date().toISOString();
+        if (!c.claimed_by_email) {
+          c.claimed_by_email = user.email;
+          c.claimed_at = c.sent_at;
         }
-        window.open(waLink(c.phone), "_blank");
-        // تسجيل "اتبعت" تلقائيًا بعد فتح واتساب
-        await api.setStatus(c.id, "sent");
-        c.status = "sent"; c.sent_by_email = user.email; c.sent_at = new Date().toISOString();
-        toast("اتفتح واتساب وسُجِّل إنه اتبعت ✓");
         renderAll();
-      } else if(btn.dataset.act==="sent"){ await api.setStatus(c.id,"sent"); c.status="sent"; c.sent_by_email=user.email; toast("اتسجّل إنه اتبعت ✓"); renderAll(); }
-      else if(btn.dataset.act==="reply"){ await api.setStatus(c.id,"replied"); c.status="replied"; if(!c.sent_by_email) c.sent_by_email=user.email; renderAll(); }
-      else if(btn.dataset.act==="no"){ await api.setStatus(c.id,"no_answer"); c.status="no_answer"; renderAll(); }
+        
+        // 2. Save to DB in background
+        api.setStatus(c.id, "sent").then(() => {
+          // success: open WhatsApp after DB save confirmed
+          window.open(url, "_blank") || (window.location.href = url);
+          toast("✅ اتسجّل إنه اتبعتله خلاص واتفتح واتساب");
+        }).catch(err => {
+          console.error(err);
+          toast("تعذّر حفظ الحالة: " + (err.message||err));
+          c.status = oldStatus;
+          if (oldStatus === "new") {
+            c.claimed_by_email = null;
+            c.claimed_at = null;
+          }
+          renderAll();
+        });
+      } 
+      else if(btn.dataset.act==="sent"){ 
+        const oldStatus = c.status;
+        c.status = "sent"; 
+        c.sent_by_email = user.email; 
+        c.sent_at = new Date().toISOString();
+        renderAll(); 
+        toast("اتسجّل إنه اتبعت ✓"); 
+        api.setStatus(c.id, "sent").catch(err => {
+          toast("تعذّر حفظ الحالة: " + (err.message||err));
+          c.status = oldStatus; renderAll();
+        });
+      }
+      else if(btn.dataset.act==="reply"){ 
+        const oldStatus = c.status;
+        c.status = "replied"; 
+        if(!c.sent_by_email) c.sent_by_email = user.email; 
+        renderAll(); 
+        api.setStatus(c.id, "replied").catch(err => {
+          toast("تعذّر حفظ الحالة: " + (err.message||err));
+          c.status = oldStatus; renderAll();
+        });
+      }
+      else if(btn.dataset.act==="no"){ 
+        const oldStatus = c.status;
+        c.status = "no_answer"; 
+        renderAll(); 
+        api.setStatus(c.id, "no_answer").catch(err => {
+          toast("تعذّر حفظ الحالة: " + (err.message||err));
+          c.status = oldStatus; renderAll();
+        });
+      }
     }catch(err){ toast("حصل خطأ: "+(err.message||err)); }
   }
   async function refresh(){ await api.loadContacts(); renderAll(); }
@@ -419,7 +475,29 @@
     $("demoBadge").classList.toggle("hidden", !DEMO);
     await api.loadCategories(); fillCategorySelects(); onCategoryChange();
     renderMessages();
-    await refresh(); api.subscribe(()=>refresh());
+    await refresh(); 
+    api.subscribe((payload)=>{
+      if (payload && payload.eventType) {
+        const { eventType, new: newRec, old: oldRec } = payload;
+        if (eventType === "INSERT") {
+          if (!contacts.some(x => x.id === newRec.id)) {
+            contacts.unshift(newRec);
+          }
+        } else if (eventType === "UPDATE") {
+          const idx = contacts.findIndex(x => x.id === newRec.id);
+          if (idx !== -1) {
+            contacts[idx] = Object.assign({}, contacts[idx], newRec);
+          } else {
+            contacts.unshift(newRec);
+          }
+        } else if (eventType === "DELETE") {
+          contacts = contacts.filter(x => x.id !== oldRec.id);
+        }
+        renderAll();
+      } else {
+        refresh();
+      }
+    });
   }
 
   function bind(){

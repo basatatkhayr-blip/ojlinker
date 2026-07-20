@@ -144,6 +144,16 @@ html, body {
   background: #128C7E;
   box-shadow: 0 6px 14px rgba(37, 211, 102, 0.35);
 }
+.btn-wa-sent {
+  background: var(--green-soft);
+  color: var(--green);
+  border: 1px solid var(--green);
+  font-weight: 700;
+}
+.btn-wa-sent:hover {
+  background: var(--green);
+  color: #fff;
+}
 
 /* Inputs */
 .input {
