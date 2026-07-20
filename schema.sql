@@ -67,6 +67,21 @@ returns public.contacts as $$
   returning *;
 $$ language sql security definer;
 
+-- ---------- تحديث حالة جهة اتصال إلى تم الإرسال (sent) ----------
+create or replace function public.send_contact(contact_id uuid)
+returns public.contacts as $$
+  update public.contacts
+     set status = 'sent',
+         sent_by = auth.uid(),
+         sent_by_email = (select email from auth.users where id = auth.uid()),
+         sent_at = now(),
+         claimed_by = coalesce(claimed_by, auth.uid()),
+         claimed_by_email = coalesce(claimed_by_email, (select email from auth.users where id = auth.uid())),
+         claimed_at = coalesce(claimed_at, now())
+   where id = contact_id
+   returning *;
+$$ language sql security definer;
+
 -- ============================================================
 -- RLS: أي عضو مسجّل دخول يقدر يقرأ/يضيف/يعدّل
 -- ============================================================

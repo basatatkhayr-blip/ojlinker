@@ -4,10 +4,10 @@
 // ============================================================
 window.APP_CONFIG = {
   // انسخ الـ Project URL هنا
-  SUPABASE_URL: "https://yuesfbipespgwctwmlia.supabase.co",
+  SUPABASE_URL: "https://dbtvtvvwipaenjsxwpai.supabase.co",
 
   // انسخ الـ anon public key هنا (مش الـ service_role)
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1ZXNmYmlwZXNwZ3djdHdtbGlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ0NTczODgsImV4cCI6MjEwMDAzMzM4OH0.XZ3k4LBuo0KbwHGPGJ3_g3xW04o5kRFI-ov_NM-jvWo",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRidHZ0dnZ3aXBhZW5qc3h3cGFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NzAzMDYsImV4cCI6MjEwMDE0NjMwNn0.baxLu7noBmMiYR22S6x2lwjH4I-lvjMW65GH8Cl8Qw0",
 
   // كود الدولة الافتراضي للأرقام المحلية (السعودية = 966)
   DEFAULT_COUNTRY_CODE: "966",

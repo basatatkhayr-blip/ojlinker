@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=14" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -15,23 +15,54 @@
 <body>
   <!-- تسجيل الدخول -->
   <div id="authView" class="auth-view hidden">
-    <div class="auth-bg"></div>
-    <form id="loginForm" class="auth-card">
-      <div class="brand brand-lg">
-        <span class="brand-mark">OJ</span>
+    <aside class="auth-hero">
+      <div class="hero-grid"></div>
+      <span class="hero-orb hero-orb-1"></span>
+      <span class="hero-orb hero-orb-2"></span>
+      <div class="brand brand-hero">
         <span class="brand-name">OJ<span>Linker</span></span>
+        <span class="brand-mark">OJ</span>
       </div>
-      <p class="muted auth-sub">منصة متابعة التواصل مع العملاء</p>
-      <label>البريد الإلكتروني
-        <input type="email" id="email" autocomplete="username" required placeholder="you@ojlinker.com" />
-      </label>
-      <label>كلمة المرور
-        <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••" />
-      </label>
-      <button type="submit" class="btn btn-primary btn-block">تسجيل الدخول</button>
-      <p id="authError" class="error hidden"></p>
-      <p class="muted small copyright">© OJLinker — جميع الحقوق محفوظة</p>
-    </form>
+      <div class="hero-body">
+        <h1 class="hero-title">منصّة متابعة التواصل<br>مع عملائك في مكان واحد</h1>
+        <p class="hero-sub">نظّم فريقك، وتابع كل رقم اتبعتله مين وامتى — من غير تكرار ولا تعارض.</p>
+        <ul class="hero-features">
+          <li><span class="hf-ic">✔</span> إرسال واتساب بضغطة واحدة</li>
+          <li><span class="hf-ic">✔</span> منع تكرار التواصل بين أعضاء الفريق</li>
+          <li><span class="hf-ic">✔</span> تقارير مباشرة لكل عضو</li>
+          <li><span class="hf-ic">✔</span> رفع أرقام جديدة من Excel / CSV</li>
+        </ul>
+      </div>
+      <p class="hero-foot">© OJLinker 2026 — جميع الحقوق محفوظة</p>
+    </aside>
+    <div class="auth-form-side">
+      <form id="loginForm" class="auth-card">
+        <div class="brand brand-lg auth-mobile-brand">
+          <span class="brand-mark">OJ</span>
+          <span class="brand-name">OJ<span>Linker</span></span>
+        </div>
+        <h2 class="auth-h2">أهلاً بيك تاني 👋</h2>
+        <p class="muted auth-sub">سجّل دخولك عشان تكمّل شغلك</p>
+        <div class="field">
+          <label for="email">البريد الإلكتروني</label>
+          <div class="field-wrap">
+            <span class="field-ic">✉️</span>
+            <input type="email" id="email" autocomplete="username" required placeholder="you@ojlinker.com" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="password">كلمة المرور</label>
+          <div class="field-wrap">
+            <span class="field-ic">🔒</span>
+            <input type="password" id="password" autocomplete="current-password" required placeholder="••••••••" />
+            <button type="button" id="pwToggle" class="pw-toggle" aria-label="إظهار كلمة المرور">👁️</button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">تسجيل الدخول</button>
+        <p id="authError" class="error hidden"></p>
+        <p class="muted small copyright">🔒 محمي بتشفير · OJLinker</p>
+      </form>
+    </div>
   </div>
 
   <!-- التطبيق -->
@@ -175,7 +206,7 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <script src="config.js?v=13"></script>
-  <script src="app.js?v=13"></script>
+  <script src="config.js?v=14"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>

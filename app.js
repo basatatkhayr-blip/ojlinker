@@ -73,6 +73,14 @@
       return `https://api.whatsapp.com/send?phone=${phone}&text=${text}`;
     }
   }
+  function openWhatsApp(url){
+    if(url.indexOf("http")===0){ window.open(url, "_blank"); return; }
+    var a = document.createElement("a");
+    a.href = url; a.rel = "noopener";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ if(a.parentNode) a.parentNode.removeChild(a); }, 100);
+  }
   const sentByOf = (c) => c.sent_by_email || null;
 
   // ============================================================
@@ -98,8 +106,20 @@
     },
     async loadContacts(){
       if(DEMO){ contacts = DEMO_DATA.slice(); return; }
-      const { data, error } = await sb.from("contacts").select("*").order("created_at",{ascending:false});
-      if(error) throw error; contacts = data||[];
+      // نجيب كل البيانات بالـ pagination عشان نتخطى حد الـ 1000 سطر
+      const PAGE = 1000;
+      let all = [], from = 0, done = false;
+      while(!done){
+        const { data, error } = await sb.from("contacts").select("*")
+          .order("created_at",{ascending:false})
+          .range(from, from + PAGE - 1);
+        if(error) throw error;
+        const chunk = data || [];
+        all = all.concat(chunk);
+        if(chunk.length < PAGE) done = true;
+        else from += PAGE;
+      }
+      contacts = all;
     },
     async claim(id){
       if(DEMO){ const c=contacts.find(x=>x.id===id); if(c&&c.status==="new"){c.status="claimed";c.claimed_by_email=user.email;} return c; }
@@ -238,6 +258,8 @@
       if(q){ const hay=((c.name||"")+" "+(c.phone||"")).toLowerCase(); if(hay.indexOf(q)===-1) return false; }
       return true;
     });
+    // إظهار أو إخفاء رسالة القائمة الفارغة للمرسل
+    $("sentEmpty").classList.toggle("hidden", rows.length>0);
     // Render responsive card grid for Sent contacts
     $("sentMobileList").innerHTML = rows.map(c=>{
       const dateStr = c.sent_at ? new Date(c.sent_at).toLocaleDateString("ar-SA",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
@@ -302,7 +324,10 @@
         const url = waLink(c.phone);
         const oldStatus = c.status;
         
-        // 1. Optimistic UI update immediately
+        // 1. فتح رابط واتساب فورًا (بشكل متزامن لمنع حظر النوافذ المنبثقة)
+        openWhatsApp(url);
+        
+        // 2. تحديث واجهة المستخدم بشكل فوري (Optimistic Update)
         c.status = "sent";
         c.sent_by_email = user.email;
         c.sent_at = new Date().toISOString();
@@ -312,11 +337,9 @@
         }
         renderAll();
         
-        // 2. Save to DB in background
+        // 3. حفظ الحالة في قاعدة البيانات في الخلفية
         api.setStatus(c.id, "sent").then(() => {
-          // success: open WhatsApp after DB save confirmed
-          window.open(url, "_blank") || (window.location.href = url);
-          toast("✅ اتسجّل إنه اتبعتله خلاص واتفتح واتساب");
+          toast("✅ اتسجّل إنه اتبعتله خلاص وتم فتح واتساب");
         }).catch(err => {
           console.error(err);
           toast("تعذّر حفظ الحالة: " + (err.message||err));
@@ -482,18 +505,15 @@
         if (eventType === "INSERT") {
           if (!contacts.some(x => x.id === newRec.id)) {
             contacts.unshift(newRec);
+            renderAll();
           }
         } else if (eventType === "UPDATE") {
-          const idx = contacts.findIndex(x => x.id === newRec.id);
-          if (idx !== -1) {
-            contacts[idx] = Object.assign({}, contacts[idx], newRec);
-          } else {
-            contacts.unshift(newRec);
-          }
+          // reload كامل عشان نضمن دقة الإحصائيات لما أكتر من عضو بيشتغل
+          refresh();
         } else if (eventType === "DELETE") {
           contacts = contacts.filter(x => x.id !== oldRec.id);
+          renderAll();
         }
-        renderAll();
       } else {
         refresh();
       }
@@ -522,6 +542,8 @@
     $("waModeSelect").addEventListener("change", (e) => {
       localStorage.setItem("wa_mode", e.target.value);
     });
+    var pwT = $("pwToggle");
+    if(pwT){ pwT.addEventListener("click", function(){ var p=$("password"); if(p.type==="password"){ p.type="text"; pwT.textContent="🙈"; } else { p.type="password"; pwT.textContent="👁️"; } }); }
   }
 
   async function init(){
